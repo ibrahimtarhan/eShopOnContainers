@@ -1,4 +1,6 @@
-﻿namespace Microsoft.eShopOnContainers.Services.Ordering.Domain.AggregatesModel.OrderAggregate;
+﻿using Ordering.Domain.Events;
+
+namespace Microsoft.eShopOnContainers.Services.Ordering.Domain.AggregatesModel.OrderAggregate;
 
 public class Order
     : Entity, IAggregateRoot
@@ -190,4 +192,17 @@ public class Order
     {
         return _orderItems.Sum(o => o.GetUnits() * o.GetUnitPrice());
     }
+
+    public void SetCompleteStatus()
+    {
+        if (_orderStatusId != OrderStatus.Shipped.Id)
+        {
+            StatusChangeException(OrderStatus.Complete);
+        }
+
+        _orderStatusId = OrderStatus.Complete.Id;
+        _description = "The order was complate.";
+        AddDomainEvent(new OrderCompleteDomainEvent(this));
+    }
+
 }
