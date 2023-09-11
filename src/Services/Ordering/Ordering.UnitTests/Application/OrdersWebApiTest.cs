@@ -1,6 +1,7 @@
 ﻿namespace UnitTest.Ordering.Application;
 
 using Microsoft.eShopOnContainers.Services.Ordering.API.Application.Queries;
+using Microsoft.eShopOnContainers.Services.Ordering.Domain.AggregatesModel.OrderAggregate;
 
 public class OrdersWebApiTest
 {
@@ -104,7 +105,7 @@ public class OrdersWebApiTest
     {
         //Arrange
         var fakeOrderId = 123;
-        var fakeDynamicResult = new Order();
+        var fakeDynamicResult = new Microsoft.eShopOnContainers.Services.Ordering.API.Application.Queries.Order();
         _orderQueriesMock.Setup(x => x.GetOrderAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(fakeDynamicResult));
 
@@ -130,5 +131,64 @@ public class OrdersWebApiTest
 
         //Assert
         Assert.Equal((actionResult.Result as OkObjectResult).StatusCode, (int)System.Net.HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Set_complete_statu_order_succes()
+    {
+        //Arrange
+        
+        var fakeDynamicResult = Enumerable.Empty<OrderSummary>();
+        _orderQueriesMock.Setup(x => x.GetAllOrdersAsync())
+            .Returns(Task.FromResult(fakeDynamicResult));
+        var regularOrder = fakeDynamicResult.FirstOrDefault(c => c.status.Equals(OrderStatus.Shipped.Name));
+
+        _mediatorMock.Setup(x => x.Send(It.IsAny<IdentifiedCommand<CompleteOrderCommand, bool>>(), default))
+            .Returns(Task.FromResult(true));
+
+        //Act
+        var orderController = new OrdersController(_mediatorMock.Object, _orderQueriesMock.Object, _identityServiceMock.Object, _loggerMock.Object);
+        var actionResult = await orderController.CompleteOrderAsync(new CompleteOrderCommand(regularOrder.ordernumber), Guid.NewGuid().ToString());
+
+        //Assert
+        Assert.True(actionResult.Value); //Expecting True
+
+    }
+
+    [Fact]
+    public async Task Set_complete_statu_order_fail()
+    {
+        //Arrange
+
+        var fakeDynamicResult = Enumerable.Empty<OrderSummary>();
+        _orderQueriesMock.Setup(x => x.GetAllOrdersAsync())
+            .Returns(Task.FromResult(fakeDynamicResult));
+        var irregularOrder = fakeDynamicResult.FirstOrDefault(c => c.status == null || c.status !=(OrderStatus.Shipped.Name));
+
+        _mediatorMock.Setup(x => x.Send(It.IsAny<IdentifiedCommand<CompleteOrderCommand, bool>>(), default))
+           .Returns(Task.FromResult(true));
+
+        //Act
+        var orderController = new OrdersController(_mediatorMock.Object, _orderQueriesMock.Object, _identityServiceMock.Object, _loggerMock.Object);
+        //var actionResult = await orderController.CompleteOrderAsync(new CompleteOrderCommand(irregularOrder.ordernumber), Guid.NewGuid().ToString());
+
+        //Assert
+        var exception =await Assert.ThrowsAsync<OrderingDomainException>(() => orderController.CompleteOrderAsync(new CompleteOrderCommand(irregularOrder.ordernumber), Guid.NewGuid().ToString()));
+        
+
+    }
+    [Fact]
+    public async Task Set_complete_statu_order_false()
+    {
+        //Arrange
+        _mediatorMock.Setup(x => x.Send(It.IsAny<IdentifiedCommand<CompleteOrderCommand, bool>>(), default))
+            .Returns(Task.FromResult(true));
+
+        //Act
+        var orderController = new OrdersController(_mediatorMock.Object, _orderQueriesMock.Object, _identityServiceMock.Object, _loggerMock.Object);
+        var actionResult = await orderController.CompleteOrderAsync(new CompleteOrderCommand(1), string.Empty);
+
+        //Assert
+        Assert.False(actionResult.Value);
     }
 }

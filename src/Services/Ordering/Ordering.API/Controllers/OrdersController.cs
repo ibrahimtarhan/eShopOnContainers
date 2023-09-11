@@ -143,7 +143,7 @@ public class OrdersController : ControllerBase
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CompleteOrderAsync([FromBody] CompleteOrderCommand command, [FromHeader(Name = "x-requestid")] string requestId)
+    public async Task<ActionResult<bool>> CompleteOrderAsync([FromBody] CompleteOrderCommand command, [FromHeader(Name = "x-requestid")] string requestId)
     {
         bool commandResult = false;
 
@@ -161,11 +161,14 @@ public class OrdersController : ControllerBase
             commandResult = await _mediator.Send(requestCompleteOrder);
         }
 
-        if (!commandResult)
-        {
-            return BadRequest();
-        }
+        return commandResult;
+    }
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<OrderSummary>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<OrderSummary>>> GetAllOrdersAsync()
+    {
+        var orders = await _orderQueries.GetAllOrdersAsync();
 
-        return Ok();
+        return Ok(orders);
     }
 }
