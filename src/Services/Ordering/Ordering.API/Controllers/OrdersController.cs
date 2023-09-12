@@ -141,7 +141,7 @@ public class OrdersController : ControllerBase
 
     [Route("complate")]
     [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> CompleteOrderAsync([FromBody] CompleteOrderCommand command, [FromHeader(Name = "x-requestid")] string requestId)
     {
